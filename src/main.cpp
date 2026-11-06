@@ -128,6 +128,7 @@ static void read_sample(float &v, float &i) {
 }
 
 static constexpr int MAX_N = 900;
+static int g_last_n = 0;                 // samples in last window (check real ADC rate)
 static bool sample_window(uint32_t dur_ms, Meas &m) {
     static float vb[MAX_N], ib[MAX_N];
     static uint32_t tb[MAX_N];
@@ -141,6 +142,7 @@ static bool sample_window(uint32_t dur_ms, Meas &m) {
         read_sample(vb[n], ib[n]);
         tb[n] = el; n++;
     }
+    g_last_n = n;
     if (n < 16) return false;
 
     double sv = 0, si = 0;
@@ -210,7 +212,7 @@ static void on_ui_test(uint8_t amps) {        // runs inside lv_timer_handler()
 static void start_test(uint8_t amps) {
     const int pin = (amps == 5) ? PIN_TRIAC_5A : PIN_TRIAC_10A;
     if (!g_hw_ok || !pin_out_ok(pin)) {
-        wirerx_ui_log("%uA test refused: GPIO %d unusable / ADC missing", amps, pin);
+        wirerx_ui_log("%dA test refused: GPIO %d unusable / ADC missing", amps, pin);
         return;
     }
     if (!sample_window(TEST_WINDOW_MS, g_base)) { wirerx_ui_log("baseline sampling failed"); return; }
@@ -219,7 +221,7 @@ static void start_test(uint8_t amps) {
     digitalWrite(pin, TRIAC_ON);
     g_t_on = millis();
     g_state = T_LOADING;
-    wirerx_ui_log("[%lu] %uA test start, Vnl=%.1fV", millis() / 1000, amps, g_base.vrms);
+    wirerx_ui_log("[%lu] %dA test start, Vnl=%.1fV", millis() / 1000, amps, g_base.vrms);
     ui_refresh(g_live, g_pf_shown);           // shows TESTING + locks buttons
 }
 
@@ -258,8 +260,8 @@ void test_tick() {
 
     wirerx_ui_log("[%lu] done: Vld=%.1fV I=%.2fA drop=%.1f%% R=%.2f", millis() / 1000,
                   ld.vrms, ld.irms, g_vdrop, g_res);
-    wirerx_ui_log("      class=%d conf=%.0f%% PF %.2f->%.2f f=%.1fHz",
-                  g_fault, g_conf, g_base.pf, ld.pf, ld.freq);
+    wirerx_ui_log("      class=%d conf=%.0f%% PF %.2f->%.2f f=%.1fHz n=%d",
+                  g_fault, g_conf, g_base.pf, ld.pf, ld.freq, g_last_n);
     ui_refresh(ld, ld.pf);
 }
 
