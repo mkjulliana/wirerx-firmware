@@ -309,6 +309,7 @@ void wirerx_ui_log(const char *fmt, ...) {
     va_end(ap);
     size_t n = strlen(line);
     line[n] = '\n'; line[n + 1] = 0;
+    if (strlen(lv_textarea_get_text(ta_log)) > 2500) lv_textarea_set_text(ta_log, "");   // cap log memory
     lv_textarea_add_text(ta_log, line);
     Serial.print(line);
 }
