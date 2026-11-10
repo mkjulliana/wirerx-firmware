@@ -14,14 +14,17 @@
 #include "wirerx_ui.h"
 
 // ============================ GPIO MAP (FINAL & SAFE) ========================
-static constexpr int PIN_TRIAC_5A  = 1;    // 1 kW load
-static constexpr int PIN_TRIAC_10A = 2;    // 2 kW load
+// !! Display uses CS10 RST7 DC14 MOSI11 SCK12 MISO13(touch DO) and touch CS = GPIO1, T_IRQ = GPIO2.
+// !! The OLD triac/button/I2C0 pins collided with those, so they are UNASSIGNED (-1) until the final map is known.
+// !! With -1 the tests stay LOCKED and the buttons are disabled (safe). Set the real GPIOs here.
+static constexpr int PIN_TRIAC_5A  = -1;   // TODO final map (1 kW load)  [old: 1, now touch CS]
+static constexpr int PIN_TRIAC_10A = -1;   // TODO final map (2 kW load)  [old: 2, now touch IRQ]
 static constexpr int PIN_PDC_CTRL  = 16;   // peak-detector MOSFETs
 static constexpr int PIN_FAN       = 18;
-static constexpr int PIN_BTN_START = 4;
-static constexpr int PIN_BTN_LEFT  = 10;
-static constexpr int PIN_BTN_RIGHT = 11;
-static constexpr int PIN_BTN_OK    = 14;
+static constexpr int PIN_BTN_START = -1;   // TODO final map [old: 4]
+static constexpr int PIN_BTN_LEFT  = -1;   // TODO final map [old: 10, now display CS]
+static constexpr int PIN_BTN_RIGHT = -1;   // TODO final map [old: 11, now display MOSI]
+static constexpr int PIN_BTN_OK    = -1;   // TODO final map [old: 14, now display DC]
 
 static constexpr int  TRIAC_ON  = HIGH;
 static constexpr int  PDC_RESET = HIGH;    // MOSFET on = discharge peak caps (flip if inverted)
@@ -29,7 +32,7 @@ static constexpr int  FAN_ON    = HIGH;
 static constexpr bool START_ACTIVE_HIGH = true;   // schematic feeds START from 3.3 V
 
 // ============================ ADS1015 (two I2C buses) ========================
-static constexpr int I2C0_SDA = 12, I2C0_SCL = 17;   // voltage bus
+static constexpr int I2C0_SDA = -1, I2C0_SCL = 17;   // voltage bus  [TODO final map: old SDA 12 is now display SCK]
 static constexpr int I2C1_SDA = 8,  I2C1_SCL = 9;    // current bus
 Adafruit_ADS1015 ads_voltage;   // A0 ZMPT101B, A1 +Vpeak
 Adafruit_ADS1015 ads_current;   // A0 CT clamp,  A1 -Vpeak
@@ -315,13 +318,16 @@ void setup() {
     btn_init(b_start); btn_init(b_left); btn_init(b_right); btn_init(b_ok);
 
     // external ADCs: two independent I2C buses
-    Wire.begin(I2C0_SDA, I2C0_SCL);
+    bool a0 = false, a1 = false;
+    if (I2C0_SDA >= 0) {                       // skip bus 0 while its SDA pin is unassigned
+        Wire.begin(I2C0_SDA, I2C0_SCL);
+        a0 = ads_voltage.begin(0x48, &Wire);
+        Wire.setClock(400000);
+    }
     Wire1.begin(I2C1_SDA, I2C1_SCL);
-    bool a0 = ads_voltage.begin(0x48, &Wire);
-    bool a1 = ads_current.begin(0x48, &Wire1);
-    Wire.setClock(400000);
+    a1 = ads_current.begin(0x48, &Wire1);
     Wire1.setClock(400000);
-    if (!a0) Serial.println("[ADC] ads_voltage not found on Wire (SDA12/SCL17)");
+    if (!a0) Serial.println("[ADC] ads_voltage not found on Wire (I2C0 pins, see final map)");
     if (!a1) Serial.println("[ADC] ads_current not found on Wire1 (SDA8/SCL9)");
     if (!a0 || !a1) g_hw_ok = false;
     ads_voltage.setGain(GAIN_ONE);  ads_current.setGain(GAIN_ONE);        // +/-4.096 V
