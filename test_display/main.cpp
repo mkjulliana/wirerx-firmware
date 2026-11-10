@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 // Minimal display test: cycles the whole screen through red, green, blue, white, black.
 // No LVGL, no ADC, no WiFi. Build with:  pio run -e displaytest
+=======
+>>>>>>> 222cfaf (Add displaytest env using ILI9486 driver)
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 
@@ -26,4 +29,8 @@ void loop() {
     Serial.printf("[T] %s\n", NAMES[i]);
     i = (i + 1) % N;
     delay(1500);
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 222cfaf (Add displaytest env using ILI9486 driver)
