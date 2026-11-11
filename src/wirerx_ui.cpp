@@ -198,6 +198,25 @@ static void build_log_screen() {
     lv_obj_center(bl);
 }
 
+/* ---------------- boot splash (logo) ---------------- */
+extern "C" { LV_IMG_DECLARE(wirerx_logo); }
+
+static void splash_done_cb(lv_timer_t *) {
+    lv_scr_load_anim(scr_main, LV_SCR_LOAD_ANIM_FADE_ON, 400, 0, true);   // deletes the splash
+}
+
+static void show_splash() {
+    lv_obj_t *s = lv_obj_create(nullptr);
+    lv_obj_set_style_bg_color(s, lv_color_make(245, 242, 236), 0);   // same cream as the logo
+    lv_obj_clear_flag(s, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_t *img = lv_img_create(s);
+    lv_img_set_src(img, &wirerx_logo);
+    lv_obj_center(img);
+    lv_scr_load(s);
+    lv_timer_t *t = lv_timer_create(splash_done_cb, 2500, nullptr);   // show for 2.5 s
+    lv_timer_set_repeat_count(t, 1);
+}
+
 /* ---------------- public API ---------------- */
 void wirerx_ui_init() {
     scr_main = lv_obj_create(nullptr);
@@ -210,7 +229,7 @@ void wirerx_ui_init() {
     build_buttons(scr_main);
     build_log_screen();
 
-    lv_scr_load(scr_main);
+    show_splash();   // logo first, then fades into scr_main
 }
 
 void wirerx_ui_on_test(wirerx_test_cb_t cb) { s_test_cb = cb; }
